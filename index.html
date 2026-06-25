@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Nan's English Assistant</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 22px;
+      max-width: 650px;
+      margin: auto;
+      line-height: 1.5;
+    }
+    h2 { text-align: center; }
+    textarea, button {
+      width: 100%;
+      font-size: 18px;
+      padding: 12px;
+      margin-top: 10px;
+      box-sizing: border-box;
+    }
+    textarea {
+      height: 90px;
+    }
+    button {
+      border: none;
+      border-radius: 10px;
+      background: #111;
+      color: white;
+    }
+    .secondary {
+      background: #666;
+    }
+    .danger {
+      background: #b00020;
+    }
+    #result, #collection {
+      white-space: pre-wrap;
+      margin-top: 22px;
+      padding: 14px;
+      background: #f4f4f4;
+      border-radius: 12px;
+    }
+    .item {
+      background: white;
+      padding: 12px;
+      margin-top: 10px;
+      border-radius: 10px;
+    }
+  </style>
+</head>
+
+<body>
+  <h2>Nan's English Assistant</h2>
+
+  <textarea id="inputText" placeholder="Type a word, phrase, sentence, or Chinese text..."></textarea>
+
+  <button onclick="explainText()">Explain / Translate</button>
+  <button class="secondary" onclick="saveCurrent()">⭐ Save to Collection</button>
+  <button class="secondary" onclick="showCollection()">📚 View Collection</button>
+
+  <div id="result"></div>
+  <div id="collection"></div>
+
+  <script>
+    let currentInput = "";
+    let currentResult = "";
+
+    async function explainText() {
+      const input = document.getElementById("inputText").value.trim();
+      const result = document.getElementById("result");
+
+      if (!input) {
+        result.textContent = "Please enter something.";
+        return;
+      }
+
+      currentInput = input;
+      result.textContent = "Loading...";
+
+      const response = await fetch("/explain", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ word: input })
+      });
+
+      const data = await response.json();
+      currentResult = data.result || data.error;
+      result.textContent = currentResult;
+    }
+
+    function saveCurrent() {
+      if (!currentInput || !currentResult) {
+        alert("Please search something first.");
+        return;
+      }
+
+      const saved = JSON.parse(localStorage.getItem("englishCollection") || "[]");
+
+      saved.unshift({
+        input: currentInput,
+        result: currentResult,
+        date: new Date().toLocaleString()
+      });
+
+      localStorage.setItem("englishCollection", JSON.stringify(saved));
+      alert("Saved to collection!");
+    }
+
+    function showCollection() {
+      const collectionDiv = document.getElementById("collection");
+      const saved = JSON.parse(localStorage.getItem("englishCollection") || "[]");
+
+      if (saved.length === 0) {
+        collectionDiv.textContent = "No saved items yet.";
+        return;
+      }
+
+      collectionDiv.innerHTML = "<h3>My Collection</h3>";
+
+      saved.forEach((item, index) => {
+        const div = document.createElement("div");
+        div.className = "item";
+
+        div.innerHTML = `
+          <strong>${item.input}</strong>
+          <br><small>${item.date}</small>
+          <pre>${item.result}</pre>
+          <button class="danger" onclick="deleteItem(${index})">Delete</button>
+        `;
+
+        collectionDiv.appendChild(div);
+      });
+    }
+
+    function deleteItem(index) {
+      const saved = JSON.parse(localStorage.getItem("englishCollection") || "[]");
+      saved.splice(index, 1);
+      localStorage.setItem("englishCollection", JSON.stringify(saved));
+      showCollection();
+    }
+  </script>
+</body>
+</html>
